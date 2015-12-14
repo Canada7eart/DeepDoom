@@ -1,10 +1,13 @@
 #include "stdafx.h"
 #include "Emulator.h"
 
+
 const std::array<std::string, NUM_INPUTS> keyDescriptions = { "UP", "DOWN", "LEFT", "RIGHT", "SPACE", "CTRL" };
 
 Emulator::Emulator(std::string& partialWindowName)
 {
+	windowName = partialWindowName;
+
 	EnumWindows(Emulator::EnumWindowsStaticCallback, (LPARAM) this);
 
 	if (window == nullptr)
@@ -14,8 +17,9 @@ Emulator::Emulator(std::string& partialWindowName)
 	}
 
 	GetClientRectangle();
-}
 
+	CreateDCBitmap();
+}
 
 void Emulator::SendKey(INPUT_KEY key, unsigned long msPressRelease, bool setFocus /*= true*/)
 {
@@ -27,15 +31,46 @@ void Emulator::SendKey(INPUT_KEY key, unsigned long msPressRelease, bool setFocu
 	ip.ki.dwExtraInfo = 0;
 	ip.ki.wVk = key;
 
+	if (setFocus)
+	{
+		SetForegroundWindow(window);
+		EnableWindow(window, TRUE);
+		SetFocus(window);
+
+		Sleep(200);
+	}
+
 	// Send key press.
 	ip.ki.dwFlags = 0;
 	SendInput(1, &ip, sizeof(INPUT));
 
 	Sleep(msPressRelease);
 
+	if (setFocus)
+	{
+		SetForegroundWindow(window);
+		EnableWindow(window, TRUE);
+		SetFocus(window);
+	}
+
 	// Send key release.
 	ip.ki.dwFlags = KEYEVENTF_KEYUP;
 	SendInput(1, &ip, sizeof(INPUT));
+}
+
+void Emulator::GetFrame(cv::Mat& frame)
+{
+	BitBlt(compatibleHdc, 0, 0, width, height, windowHdc, 0, menuHeight, SRCCOPY);
+
+	unsigned char* pixels = new unsigned char[4 * width * height];
+
+	GetDIBits(windowHdc, bitmapHandle, 0, height, pixels, (LPBITMAPINFO)&bitmapHeader, DIB_RGB_COLORS);
+
+	frame = cv::Mat(cv::Size((int)width, (int)height), CV_8UC4, pixels).clone();
+	cv::cvtColor(frame, frame, CV_BGRA2BGR);
+	cv::flip(frame, frame, 0);
+
+	delete[] pixels;
 }
 
 void Emulator::GetClientRectangle()
@@ -44,10 +79,30 @@ void Emulator::GetClientRectangle()
 	GetWindowRect(window, &rc);
 
 	// Subtract the menu height. GetClientRect() does not work correctly.
-	int menuHeight = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CYCAPTION); // +GetSystemMetrics(SM_CXPADDEDBORDER));
+	menuHeight = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CYCAPTION); // +GetSystemMetrics(SM_CXPADDEDBORDER));
 
 	width = rc.right - rc.left;
 	height = (rc.bottom - rc.top) - menuHeight;
+}
+
+void Emulator::CreateDCBitmap()
+{
+	windowHdc = GetWindowDC(window);
+
+	compatibleHdc = CreateCompatibleDC(windowHdc);
+
+	if (bitmapHandle == nullptr)
+		bitmapHandle = CreateCompatibleBitmap(windowHdc,
+			width, height);
+
+	SelectObject(compatibleHdc, bitmapHandle);
+
+	bitmapHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bitmapHeader.biPlanes = 1;
+	bitmapHeader.biBitCount = 32;
+	bitmapHeader.biWidth = width;
+	bitmapHeader.biHeight = height;
+	bitmapHeader.biCompression = BI_RGB;
 }
 
 BOOL Emulator::EnumCallback(__in HWND hWnd)
@@ -78,3 +133,14 @@ BOOL CALLBACK Emulator::EnumWindowsStaticCallback(__in HWND hWnd, __in LPARAM lP
 	return emulator->EnumCallback(hWnd);
 }
 
+Emulator::~Emulator()
+{
+	if (windowHdc != nullptr)
+		ReleaseDC(NULL, windowHdc);
+
+	if (bitmapHandle != nullptr)
+		DeleteObject(bitmapHandle);
+
+	if (compatibleHdc != nullptr)
+		DeleteDC(compatibleHdc);
+}

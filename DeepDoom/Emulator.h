@@ -8,24 +8,31 @@ enum INPUT_KEY {
 	INPUT_SPACE = VK_SPACE, INPUT_CTRL = VK_CONTROL
 };
 
-
-
 class Emulator
 {
 public:
 	Emulator(std::string& partialWindowName);
 
+	~Emulator();
+
 	void SendKey(INPUT_KEY key, unsigned long msPressRelease, bool setFocus = true);
+	void GetFrame(cv::Mat& frame);
 
 private:
 	BOOL EnumCallback(__in HWND hWnd);
 	static BOOL CALLBACK EnumWindowsStaticCallback(__in  HWND hWnd, __in  LPARAM lParam);
-	
+
 	void GetClientRectangle();
+	void CreateDCBitmap();
 
 	HWND window = nullptr;
+	HDC windowHdc = nullptr;
+	HDC compatibleHdc = nullptr;
+	HBITMAP bitmapHandle = nullptr;
+	BITMAPINFOHEADER bitmapHeader = { 0 };
+
 	std::string windowName;
 
-	unsigned int width = 0, height = 0;
+	unsigned int width = 0, height = 0, menuHeight = 0;
 };
 
