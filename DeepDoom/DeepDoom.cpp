@@ -6,13 +6,16 @@
 #include "Emulator.h"
 #include <chrono>
 #include "FrameFingerprint.h"
-#include <unordered_map>
 #include <map>
+#include "FuzzyMap.h"
 
 const std::array<std::string, NUM_INPUTS> keyDescriptions = { "UP", "DOWN", "LEFT", "RIGHT", "SPACE", "CTRL" };
 
 std::vector<FrameFingerprint> fingerprints;
 std::map<int, int> fingerprintFrequencies;
+
+FuzzyMap<FrameFingerprint, int, double > frequencies{ FrameFingerprint::SIMILARITY_TRESHOLD };
+
 
 void ProcessFrame(Emulator& emulator)
 {
@@ -21,7 +24,7 @@ void ProcessFrame(Emulator& emulator)
 	cv::Mat frame;
 	emulator.GetFrame(frame);
 
-	cv::Rect screen(0, 0, emulator.GetWidth(),  335);
+	cv::Rect screen(0, 0, emulator.GetWidth(), 335);
 	frame = frame(screen);
 	cv::cvtColor(frame, frame, CV_BGR2GRAY);
 
@@ -32,7 +35,10 @@ void ProcessFrame(Emulator& emulator)
 	std::cout << "Frame acquired in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "\n";
 	std::cout << "Fingerprint: " << frameFingerprint.fingerprint << "\n";
 
-	auto found = std::find(fingerprints.begin(), fingerprints.end(), frameFingerprint);
+	auto found = find_if(fingerprints.begin(), fingerprints.end(), [frameFingerprint](const FrameFingerprint& fp) {
+		return frameFingerprint.isSimilar(fp);
+	});
+
 	int i = 0;
 	if (found != fingerprints.end())
 	{
@@ -44,8 +50,9 @@ void ProcessFrame(Emulator& emulator)
 		fingerprintFrequencies[i = fingerprints.size() - 1] ++;
 	}
 
+	frequencies[frameFingerprint]++;
 
-
+	std::cout << "Frequency (map): " << frequencies[frameFingerprint] << "\n";
 	std::cout << "Frequency: " << fingerprintFrequencies[i] << "\n";
 }
 

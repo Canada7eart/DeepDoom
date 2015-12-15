@@ -11,16 +11,36 @@ public:
 		fingerprint = cv::norm(frame, CV_L2) / ((double)frame.rows * (double)frame.cols);
 	}
 
-	bool operator==(const FrameFingerprint &other) const {
-		if (abs(fingerprint - other.fingerprint) < SIMILARITY_TRESHOLD)
-			return true;
-		else return false;
+	FrameFingerprint(double fp)
+	{
+		fingerprint = fp;
 	}
+
+	bool operator==(const FrameFingerprint &other) const {
+		return fingerprint == other.fingerprint;
+	}
+	bool operator<(const FrameFingerprint &other) const {
+		return (fingerprint - other.fingerprint) < 0.0;
+	}
+	bool operator>(const FrameFingerprint &other) const {
+		return (fingerprint - other.fingerprint) > 0.0;
+	}
+
+	bool isSimilar(const FrameFingerprint& other) const {
+		return abs(fingerprint - other.fingerprint) < SIMILARITY_TRESHOLD;
+	}
+
+	friend FrameFingerprint operator-(const FrameFingerprint& one, const FrameFingerprint& two);
+	friend FrameFingerprint operator+(const FrameFingerprint& one, const FrameFingerprint& two);
+	friend FrameFingerprint operator-(const FrameFingerprint& one, const double& two);
+	friend FrameFingerprint operator+(const FrameFingerprint& one, const double& two);
 
 	double fingerprint;
 
+	static constexpr double SIMILARITY_TRESHOLD = 0.00200;
+
 private:
-	static constexpr double SIMILARITY_TRESHOLD = 0.00900;
+
 };
 
 namespace std
@@ -34,24 +54,3 @@ namespace std
 		}
 	};
 }
-
-class Test
-{
-public:
-
-	Test(int arg)
-	{
-		x = arg;
-	}
-
-	bool operator==(const Test& other) const {
-		if (abs(x - other.x) < FUZZY_EQUAL)
-			return true;
-		else return false;
-	}
-
-	int x;
-
-private:
-	static const int FUZZY_EQUAL = 5;
-};
