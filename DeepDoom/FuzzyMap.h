@@ -44,6 +44,7 @@ public:
 	}
 
 	E& GetEpislon() { return epsilon; }
+	void SetEpsilon(E& newEpsilon) { epsilon = newEpsilon; }
 
 private:
 	std::map<K, V> map;
