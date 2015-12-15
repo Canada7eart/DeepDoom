@@ -2,7 +2,6 @@
 #include "Emulator.h"
 
 
-const std::array<std::string, NUM_INPUTS> keyDescriptions = { "UP", "DOWN", "LEFT", "RIGHT", "SPACE", "CTRL" };
 
 Emulator::Emulator(std::string& partialWindowName)
 {
@@ -33,11 +32,7 @@ void Emulator::SendKey(INPUT_KEY key, unsigned long msPressRelease, bool setFocu
 
 	if (setFocus)
 	{
-		SetForegroundWindow(window);
-		EnableWindow(window, TRUE);
-		SetFocus(window);
-
-		Sleep(200);
+		Focus();
 	}
 
 	// Send key press.
@@ -48,9 +43,7 @@ void Emulator::SendKey(INPUT_KEY key, unsigned long msPressRelease, bool setFocu
 
 	if (setFocus)
 	{
-		SetForegroundWindow(window);
-		EnableWindow(window, TRUE);
-		SetFocus(window);
+		Focus();
 	}
 
 	// Send key release.
@@ -71,6 +64,13 @@ void Emulator::GetFrame(cv::Mat& frame)
 	cv::flip(frame, frame, 0);
 
 	delete[] pixels;
+}
+
+void Emulator::Focus()
+{
+	SetForegroundWindow(window);
+	EnableWindow(window, TRUE);
+	SetFocus(window);
 }
 
 void Emulator::GetClientRectangle()

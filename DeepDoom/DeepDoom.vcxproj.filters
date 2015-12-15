@@ -27,6 +27,9 @@
     <ClInclude Include="Emulator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FrameFingerprint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

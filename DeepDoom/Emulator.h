@@ -18,6 +18,11 @@ public:
 	void SendKey(INPUT_KEY key, unsigned long msPressRelease, bool setFocus = true);
 	void GetFrame(cv::Mat& frame);
 
+	unsigned int GetWidth() { return width; }
+	unsigned int GetHeight() { return height; }
+
+	void Focus();
+
 private:
 	BOOL EnumCallback(__in HWND hWnd);
 	static BOOL CALLBACK EnumWindowsStaticCallback(__in  HWND hWnd, __in  LPARAM lParam);
