@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "Emulator.h"
 
-
-
 Emulator::Emulator(std::string& partialWindowName)
 {
 	windowName = partialWindowName;
@@ -20,7 +18,7 @@ Emulator::Emulator(std::string& partialWindowName)
 	CreateDCBitmap();
 }
 
-void Emulator::SendKey(INPUT_KEY key, unsigned long msPressRelease, bool setFocus /*= true*/)
+void Emulator::SendKey(INPUT_KEY key, unsigned long msPressRelease, unsigned int numFrames /*= 1*/, bool setFocus /*= true*/)
 {
 	// Set up a keyboard event.
 	INPUT ip;
@@ -30,16 +28,21 @@ void Emulator::SendKey(INPUT_KEY key, unsigned long msPressRelease, bool setFocu
 	ip.ki.dwExtraInfo = 0;
 	ip.ki.wVk = key;
 
-	if (setFocus)
+	for (unsigned int i = 0; i < numFrames; ++i)
 	{
-		Focus();
+		if (setFocus)
+		{
+			Focus();
+		}
+
+		// Send key press.
+		ip.ki.dwFlags = 0;
+		SendInput(1, &ip, sizeof(INPUT));
+
+		Sleep(msPressRelease);
+
+
 	}
-
-	// Send key press.
-	ip.ki.dwFlags = 0;
-	SendInput(1, &ip, sizeof(INPUT));
-
-	Sleep(msPressRelease);
 
 	if (setFocus)
 	{
@@ -143,4 +146,54 @@ Emulator::~Emulator()
 
 	if (compatibleHdc != nullptr)
 		DeleteDC(compatibleHdc);
+}
+
+INPUT_KEY Emulator::GetInverseKey(INPUT_KEY key)
+{
+	switch (key)
+	{
+	case INPUT_UP:
+		return INPUT_DOWN;
+		break;
+	case INPUT_DOWN:
+		return INPUT_UP;
+		break;
+	case INPUT_LEFT:
+		return INPUT_RIGHT;
+		break;
+	case INPUT_RIGHT:
+		return INPUT_LEFT;
+		break;
+	default:
+		return INPUT_INVALID;
+		break;
+	}
+}
+
+int Emulator::GetKeyIndex(INPUT_KEY key)
+{
+	switch (key)
+	{
+	case INPUT_UP:
+		return 2;
+		break;
+	case INPUT_LEFT:
+		return 0;
+		break;
+	case INPUT_RIGHT:
+		return 1;
+		break;
+	case INPUT_DOWN:
+		return 3;
+		break;
+	case INPUT_SPACE:
+		return 4;
+		break;
+	case INPUT_CTRL:
+		return 5;
+		break;
+	default:
+		return -1;
+		break;
+	}
 }

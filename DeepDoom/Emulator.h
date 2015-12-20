@@ -5,7 +5,7 @@ constexpr int NUM_INPUTS = 6;
 
 enum INPUT_KEY {
 	INPUT_UP = VK_UP, INPUT_DOWN = VK_DOWN, INPUT_LEFT = VK_LEFT, INPUT_RIGHT = VK_RIGHT,
-	INPUT_SPACE = VK_SPACE, INPUT_CTRL = VK_CONTROL
+	INPUT_SPACE = VK_SPACE, INPUT_CTRL = VK_CONTROL, INPUT_INVALID = -1
 };
 
 class Emulator
@@ -15,13 +15,16 @@ public:
 
 	~Emulator();
 
-	void SendKey(INPUT_KEY key, unsigned long msPressRelease, bool setFocus = true);
+	void SendKey(INPUT_KEY key, unsigned long msPressRelease, unsigned int numFrames = 1, bool setFocus = true);
 	void GetFrame(cv::Mat& frame);
 
 	unsigned int GetWidth() { return width; }
 	unsigned int GetHeight() { return height; }
 
 	void Focus();
+
+	static INPUT_KEY GetInverseKey(INPUT_KEY key);
+	static int GetKeyIndex(INPUT_KEY key);
 
 private:
 	BOOL EnumCallback(__in HWND hWnd);
