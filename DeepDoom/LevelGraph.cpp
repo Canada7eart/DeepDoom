@@ -20,7 +20,7 @@ LevelGraph::LevelGraph(FrameFingerprint& rootFrame)
 int LevelGraph::GetRandomUnmappedAction(LevelVertexPtr vertex)
 {
 	std::vector<int> unmappedKeys;
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < 4; ++i)
 	{
 		if (vertex->HasAdjacent(keys[i]))
 			continue;

@@ -27,7 +27,7 @@ public:
 	}
 
 	bool isSimilar(const FrameFingerprint& other) const {
-		return abs(fingerprint - other.fingerprint) < SIMILARITY_TRESHOLD;
+		return (abs((double)(fingerprint - other.fingerprint)) < SIMILARITY_TRESHOLD);
 	}
 
 	friend FrameFingerprint operator-(const FrameFingerprint& one, const FrameFingerprint& two);
@@ -37,7 +37,8 @@ public:
 
 	double fingerprint;
 
-	static constexpr double SIMILARITY_TRESHOLD = 0.00200;
+	//static constexpr double SIMILARITY_TRESHOLD = 0.00190;
+	static constexpr double SIMILARITY_TRESHOLD = 0.00350;
 
 private:
 

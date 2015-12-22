@@ -4,6 +4,7 @@
 #include "FuzzyMap.h"
 #include <random>
 #include <ctime>
+#include "ProbabilityGraph.h"
 
 class Learner
 {
@@ -24,6 +25,9 @@ private:
 
 	LevelGraph level;
 	LevelVertexPtr lastVertex = nullptr;
+	ProbabilityGraph probabilityGraph;
+	ProbabilityVertexPtr lastProbabilityVertex = nullptr;
+
 	INPUT_KEY lastKey = INPUT_INVALID;
 	FrameFingerprint lastFingerprint = FrameFingerprint(0.0);
 

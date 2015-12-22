@@ -9,6 +9,72 @@ std::vector<INPUT_KEY> keys = { INPUT_LEFT , INPUT_RIGHT,INPUT_UP ,INPUT_DOWN,  
 
 void Learner::Train()
 {
+	{
+		cv::Mat initialFrame;
+		emulator.GetFrame(initialFrame);
+		lastProbabilityVertex = probabilityGraph.AddVertex(FrameFingerprint(initialFrame), nullptr, INPUT_INVALID, 100.0);
+		lastFingerprint = lastProbabilityVertex->frame;
+		lastKey = INPUT_INVALID;
+	}
+
+	while (true)
+	{
+		int key = -1;
+
+		//	if (GetRandom(0, 1) == 0)
+			//	key = probabilityGraph.GetRandomUnmappedAction(lastProbabilityVertex);
+
+		if (key == -1)
+		{
+			key = GetRandom(0, 1);
+		}
+
+		std::vector<int> predicted;
+		if (lastProbabilityVertex != nullptr)
+			predicted = probabilityGraph.GetProbable(lastProbabilityVertex, keys[key]);
+
+		emulator.SendKey(keys[key], 60, 10, false);
+		lastKey = keys[key];
+
+		ProbabilityVertexPtr previous = lastProbabilityVertex;
+
+		Sleep(200);
+
+		if (!ProcessFrame())
+		{
+
+		}
+
+		if (lastProbabilityVertex != nullptr && predicted.size() > 1)
+		{
+			bool predictionCorrect = false;
+			for (int pred : predicted)
+			{
+				if (pred == lastProbabilityVertex->id)
+				{
+					predictionCorrect = true;
+					break;
+				}
+			}
+			if (predictionCorrect)
+			{
+				double* probability = nullptr;
+				if (previous != nullptr)
+					probability = probabilityGraph.GetProbabilityForAdjacent(previous, lastKey, lastProbabilityVertex);
+
+				std::cout << "Prediction CORRECT (n: " << predicted.size() << ") with probability: " << *probability << "\n";
+			}
+			else
+			{
+				std::cout << "Prediction failed (n: " << predicted.size() << ")\n";
+			}
+		}
+
+	}
+
+
+
+	/*
 	bool hasMoved = true;
 	bool triedInverse = false;
 
@@ -33,18 +99,6 @@ void Learner::Train()
 
 	while (true)
 	{
-		/*static int invert = 0;
-		if (invert == 0)
-		{
-			key = 0;
-			invert++;
-		}
-		else
-		{
-			key = 1;
-			invert--;
-		} */
-
 		if (hasMoved)
 		{
 			if (lastVertex != nullptr)
@@ -187,15 +241,13 @@ void Learner::Train()
 		}
 
 
-	}
-
-
+	} */
 }
+
+
 
 bool Learner::ProcessFrame()
 {
-	auto start = std::chrono::high_resolution_clock::now();
-
 	cv::Mat frame;
 	emulator.GetFrame(frame);
 
@@ -203,21 +255,65 @@ bool Learner::ProcessFrame()
 	frame = frame(screen);
 	cv::cvtColor(frame, frame, CV_BGR2GRAY);
 
-	/*// Gradient X
-	cv::Mat grad_x, grad_y;
-	int ddepth = CV_16S;
-	cv::Scharr(frame, grad_x, ddepth, 1, 0);
-	cv::convertScaleAbs(grad_x, grad_x);
+	FrameFingerprint frameFingerprint{ frame };
 
-	// Gradient Y
-	cv::Scharr(frame, grad_y, ddepth, 0, 1);
-	cv::convertScaleAbs(grad_y, grad_y);
+	probabilityGraph.GetFrequencies()[frameFingerprint]++;
 
-	// Total Gradient (approximate)
-	cv::addWeighted(grad_x, 0.5, grad_y, 0.5, 0, frame); */
+	bool hasMoved = false;
 
-	//cv::Canny(frame, frame, 80, 100);
+	if (probabilityGraph.GetFrequencies()[frameFingerprint] == 1)
+	{
+		lastProbabilityVertex = probabilityGraph.AddVertex(frameFingerprint, lastProbabilityVertex, lastKey, 60.0);
+		probabilityGraph.GetVertexFrames()[frameFingerprint] = lastProbabilityVertex;
+		hasMoved = true;
+		std::cout << "New state (" << lastProbabilityVertex->id << "), fingerprint: " << frameFingerprint.fingerprint << "\n";
+	}
+	else
+	{
+		ProbabilityVertexPtr newVertex = probabilityGraph.GetVertexFrames()[frameFingerprint];
 
+		bool similar = lastFingerprint.isSimilar(frameFingerprint);
+
+		double* probability = probabilityGraph.GetProbabilityForAdjacent(lastProbabilityVertex, lastKey, newVertex);
+
+		if (similar)
+		{
+			if (probability == nullptr)
+			{
+				probabilityGraph.ConnectFallbackVertex(lastProbabilityVertex->id, lastKey, 30.0);
+			}
+			else
+			{
+				*probability *= 1.2;
+			}
+		}
+		else
+		{
+			if (probability == nullptr)
+			{
+				probabilityGraph.ConnectVertex(lastProbabilityVertex->id, newVertex->id, lastKey, 40.0);
+			}
+			else
+			{
+				*probability *= 1.3;
+			}
+			hasMoved = true;
+		}
+
+		lastProbabilityVertex = newVertex;
+	}
+
+	lastFingerprint = lastProbabilityVertex->frame;
+	return hasMoved;
+
+	/*auto start = std::chrono::high_resolution_clock::now();
+
+	cv::Mat frame;
+	emulator.GetFrame(frame);
+
+	cv::Rect screen(0, 0, emulator.GetWidth(), 335);
+	frame = frame(screen);
+	cv::cvtColor(frame, frame, CV_BGR2GRAY);
 
 	FrameFingerprint frameFingerprint{ frame };
 
@@ -266,7 +362,7 @@ bool Learner::ProcessFrame()
 	}
 
 	lastFingerprint = lastVertex->frame;
-	return hasMoved;
+	return hasMoved; */
 }
 
 int Learner::GetRandom(int min, int max)

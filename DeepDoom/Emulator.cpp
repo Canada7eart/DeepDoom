@@ -58,6 +58,8 @@ void Emulator::GetFrame(cv::Mat& frame)
 {
 	BitBlt(compatibleHdc, 0, 0, width, height, windowHdc, 0, menuHeight, SRCCOPY);
 
+
+
 	unsigned char* pixels = new unsigned char[4 * width * height];
 
 	GetDIBits(windowHdc, bitmapHandle, 0, height, pixels, (LPBITMAPINFO)&bitmapHeader, DIB_RGB_COLORS);
@@ -65,6 +67,13 @@ void Emulator::GetFrame(cv::Mat& frame)
 	frame = cv::Mat(cv::Size((int)width, (int)height), CV_8UC4, pixels).clone();
 	cv::cvtColor(frame, frame, CV_BGRA2BGR);
 	cv::flip(frame, frame, 0);
+
+	/*// Copy to clipboard
+	OpenClipboard(NULL);
+
+	EmptyClipboard();
+	SetClipboardData(CF_BITMAP, bitmapHandle);
+	CloseClipboard(); */
 
 	delete[] pixels;
 }

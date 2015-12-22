@@ -150,6 +150,9 @@
     <ClInclude Include="Emulator.h" />
     <ClInclude Include="FrameFingerprint.h" />
     <ClInclude Include="FuzzyMap.h" />
+    <ClInclude Include="Learner.h" />
+    <ClInclude Include="LevelGraph.h" />
+    <ClInclude Include="ProbabilityGraph.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -157,6 +160,9 @@
     <ClCompile Include="DeepDoom.cpp" />
     <ClCompile Include="Emulator.cpp" />
     <ClCompile Include="FrameFingerprint.cpp" />
+    <ClCompile Include="Learner.cpp" />
+    <ClCompile Include="LevelGraph.cpp" />
+    <ClCompile Include="ProbabilityGraph.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
