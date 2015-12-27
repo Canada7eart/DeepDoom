@@ -12,6 +12,10 @@ void Learner::Train()
 	{
 		cv::Mat initialFrame;
 		emulator.GetFrame(initialFrame);
+		cv::Rect screen(0, 0, emulator.GetWidth(), 335);
+		initialFrame = initialFrame(screen);
+		cv::cvtColor(initialFrame, initialFrame, CV_BGR2GRAY);
+
 		lastProbabilityVertex = probabilityGraph.AddVertex(FrameFingerprint(initialFrame), nullptr, INPUT_INVALID, 100.0);
 		lastFingerprint = lastProbabilityVertex->frame;
 		lastKey = INPUT_INVALID;
@@ -261,18 +265,28 @@ bool Learner::ProcessFrame()
 
 	bool hasMoved = false;
 
-	if (probabilityGraph.GetFrequencies()[frameFingerprint] == 1)
+	int frequency = probabilityGraph.GetFrequencies()[frameFingerprint];
+
+	static int totalEnabled = 0;
+
+	if (frequency == 1)
 	{
-		lastProbabilityVertex = probabilityGraph.AddVertex(frameFingerprint, lastProbabilityVertex, lastKey, 60.0);
+		lastProbabilityVertex = probabilityGraph.AddDisabledVertex(frameFingerprint);
 		probabilityGraph.GetVertexFrames()[frameFingerprint] = lastProbabilityVertex;
 		hasMoved = true;
-		std::cout << "New state (" << lastProbabilityVertex->id << "), fingerprint: " << frameFingerprint.fingerprint << "\n";
+		std::cout << "New disabled state (" << lastProbabilityVertex->id << "), fingerprint: " << frameFingerprint.fingerprint << "\n";
 	}
-	else
+	else if (frequency >= 3)
 	{
 		ProbabilityVertexPtr newVertex = probabilityGraph.GetVertexFrames()[frameFingerprint];
 
-		bool similar = lastFingerprint.isSimilar(frameFingerprint);
+		if (frequency == 3)
+		{
+			totalEnabled++;
+			std::cout << "Vertex " << newVertex->id << " enabled (total: " << totalEnabled << ")\n";
+		}
+
+		bool similar = lastFingerprint.isNormSimilar(frameFingerprint);
 
 		double* probability = probabilityGraph.GetProbabilityForAdjacent(lastProbabilityVertex, lastKey, newVertex);
 

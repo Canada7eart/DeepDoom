@@ -8,58 +8,24 @@
 #include "FrameFingerprint.h"
 #include <map>
 #include "FuzzyMap.h"
-
-const std::array<std::string, NUM_INPUTS> keyDescriptions = { "UP", "DOWN", "LEFT", "RIGHT", "SPACE", "CTRL" };
-
-std::vector<FrameFingerprint> fingerprints;
-std::map<int, int> fingerprintFrequencies;
-
-FuzzyMap<FrameFingerprint, int, double > frequencies{ FrameFingerprint::SIMILARITY_TRESHOLD };
-
-
-void ProcessFrame(Emulator& emulator)
-{
-	auto start = std::chrono::high_resolution_clock::now();
-
-	cv::Mat frame;
-	emulator.GetFrame(frame);
-
-	cv::Rect screen(0, 0, emulator.GetWidth(), 335);
-	frame = frame(screen);
-	cv::cvtColor(frame, frame, CV_BGR2GRAY);
-
-	FrameFingerprint frameFingerprint{ frame };
-
-	auto end = std::chrono::high_resolution_clock::now();
-
-	std::cout << "Frame acquired in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "\n";
-	std::cout << "Fingerprint: " << frameFingerprint.fingerprint << "\n";
-
-	auto found = find_if(fingerprints.begin(), fingerprints.end(), [frameFingerprint](const FrameFingerprint& fp) {
-		return frameFingerprint.isSimilar(fp);
-	});
-
-	int i = 0;
-	if (found != fingerprints.end())
-	{
-		i = std::distance(fingerprints.begin(), found);
-		fingerprintFrequencies[i] ++;
-	}
-	else {
-		fingerprints.push_back(frameFingerprint);
-		fingerprintFrequencies[i = fingerprints.size() - 1] ++;
-	}
-
-	frequencies[frameFingerprint]++;
-
-	std::cout << "Frequency (map): " << frequencies[frameFingerprint] << "\n";
-	std::cout << "Frequency: " << fingerprintFrequencies[i] << "\n";
-}
-
+#include "Learner.h"
 
 int main(int argc, char** argv)
 {
+/*	FuzzyMap<FrameFingerprint, int, double> test{ FrameFingerprint::SIMILARITY_TRESHOLD };
+
+	test[FrameFingerprint(0.085951950804441610)] = 1;
+	test[FrameFingerprint(0.083057393916518105)] = 2;
+	test[FrameFingerprint(0.090380971665016532)] = 3;
+
+	int x = test[FrameFingerprint(0.082161949313406077)];
+
+	int y = 0;
+
+	return 0; */
+
 	std::string partialEmulatorName = "DOSBox 0";
+	
 
 	if (argc > 1)
 	{
@@ -74,43 +40,10 @@ int main(int argc, char** argv)
 	}
 
 	Emulator emulator{ partialEmulatorName };
-
-	std::vector<INPUT_KEY> keys = { INPUT_UP , INPUT_DOWN , INPUT_LEFT , INPUT_RIGHT,
-		INPUT_SPACE , INPUT_CTRL };
-
-	srand((unsigned int)time(NULL));
-
 	emulator.Focus();
 
-	while (true)
-	{
-		//Sleep(60);
-
-		ProcessFrame(emulator);
-
-		Sleep(2000);
-
-		int key = 0;
-		/* key = rand() % keys.size(); */
-
-		static int invert = 0;
-		if (invert == 0)
-		{
-			key = 0;
-			invert++;
-		}
-		else
-		{
-			key = 1;
-			invert--;
-		}
-
-
-		//emulator.SendKey(keys[key], 60);
-		std::cout << "Sent keystroke " << keyDescriptions[key] << "\n";
-
-		//Sleep(60);
-	}
+	Learner learner{ emulator };
+	learner.Train();
 
 	return 0;
 }

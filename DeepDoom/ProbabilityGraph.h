@@ -33,6 +33,7 @@ public:
 
 	std::vector<int> GetProbable(ProbabilityVertexPtr vertex, INPUT_KEY key);
 
+	ProbabilityVertexPtr AddDisabledVertex(FrameFingerprint& frame);
 	ProbabilityVertexPtr AddVertex(FrameFingerprint& frame, ProbabilityVertexPtr previousVertex, INPUT_KEY key, double probability);
 	void ConnectVertex(unsigned int V, unsigned int W, INPUT_KEY key, double probability);
 	void ConnectFallbackVertex(unsigned int V, INPUT_KEY key, double probability);
