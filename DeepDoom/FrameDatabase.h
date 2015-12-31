@@ -5,18 +5,25 @@ class FrameDatabase
 {
 public:
 	FrameFingerprint GetSimilarFrame(const FrameFingerprint& frame) const;
-	int AddFrame( FrameFingerprint& frame);
+	int AddFrame(FrameFingerprint& frame);
+
+	int GetFrameFrequency(int frameId) { return frequencies[frameId]; }
+	void IncreaseFrequency(int frameId) { frequencies[frameId]++; }
+	void DecreaseFrequency(int frameId) { frequencies[frameId]--; }
+
+	static bool AreFramesSimilar(const FrameFingerprint& frame1, const FrameFingerprint& frame2, int strictness = 0);
 
 private:
 	FrameFingerprint GetSimilarFrame(const FrameFingerprint& frame, const std::vector<FrameFingerprint>& dataset, int strictness) const;
 
 	std::vector<FrameFingerprint> frames;
+	std::vector<int> frequencies;
 
-	std::vector<int> HAMMING_TRESHOLD = { 35, 32, 27 };
-	std::vector<double> HISTOGRAM_TRESHOLD = { 0.10, 0.09, 0.05 };
-	std::vector<double> NORM_TRESHOLD = { 0.0950, 0.0800, 0.0550 };
+	static std::vector<int> HAMMING_TRESHOLD;
+	static std::vector<double> HISTOGRAM_TRESHOLD;
+	static std::vector<double> NORM_TRESHOLD;
 
-	const int MAX_STRICTNESS = 2;
+	static constexpr int MAX_STRICTNESS = 2;
 	/*
 	// Also seems to work.
 	int HAMMING_TRESHOLD = 35;

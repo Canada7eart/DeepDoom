@@ -16,7 +16,7 @@ void Learner::Train()
 		cv::Rect screen(0, 0, emulator.GetWidth(), 335);
 		initialFrame = initialFrame(screen);
 		cv::cvtColor(initialFrame, initialFrame, CV_BGR2GRAY);
-		frames.AddFrame(FrameFingerprint(initialFrame));
+
 
 		lastProbabilityVertex = probabilityGraph.AddVertex(FrameFingerprint(initialFrame), nullptr, INPUT_INVALID, 100.0);
 		lastFingerprint = lastProbabilityVertex->frame;
@@ -39,7 +39,7 @@ void Learner::Train()
 		if (lastProbabilityVertex != nullptr)
 			predicted = probabilityGraph.GetProbable(lastProbabilityVertex, keys[key]);
 
-		emulator.SendKey(keys[key], 60, 10, false);
+		emulator.SendKey(keys[key], 60, 9, false);
 		lastKey = keys[key];
 
 		ProbabilityVertexPtr previous = lastProbabilityVertex;
@@ -51,7 +51,9 @@ void Learner::Train()
 
 		}
 
-		if (lastProbabilityVertex != nullptr && predicted.size() > 1)
+		//std::cout << "Size : " << predicted.size() << "\n";
+
+		if (lastProbabilityVertex != nullptr && predicted.size() > 2)
 		{
 			bool predictionCorrect = false;
 			for (int pred : predicted)
@@ -68,11 +70,11 @@ void Learner::Train()
 				if (previous != nullptr)
 					probability = probabilityGraph.GetProbabilityForAdjacent(previous, lastKey, lastProbabilityVertex);
 
-				//	std::cout << "Prediction CORRECT (n: " << predicted.size() << ") with probability: " << *probability << "\n";
+				std::cout << "Prediction CORRECT (n: " << predicted.size() << ") with probability: " << *probability << "\n";
 			}
 			else
 			{
-				//	std::cout << "Prediction failed (n: " << predicted.size() << ")\n";
+				std::cout << "Prediction failed (n: " << predicted.size() << ")\n";
 			}
 		}
 
@@ -262,44 +264,63 @@ bool Learner::ProcessFrame()
 	cv::cvtColor(frame, frame, CV_BGR2GRAY);
 	GaussianBlur(frame, frame, cv::Size(11, 11), 3);
 
-
-
 	FrameFingerprint frameFingerprint{ frame };
 
 	probabilityGraph.GetFrequencies()[frameFingerprint]++;
+
+	FrameFingerprint similar = probabilityGraph.GetFrameDatabase().GetSimilarFrame(frameFingerprint);
 
 	bool hasMoved = false;
 
 	int frequency = probabilityGraph.GetFrequencies()[frameFingerprint];
 
-	unsigned int id = 0;
-	FrameFingerprint database = frames.GetSimilarFrame(frameFingerprint);
+	//imshow("Frame", frame);
 
-	if (database.fingerprint > 0)
-	{
-		id = database.id;
-		if (frequency == 1)
-		{
-			std::cout << "Found frame in database (" << id << ") but it's supposed to be new\n";
-		}
-		else
-		{
-			std::cout << "Found frame in database (" << id << ")\n";
-		}
-	}
-	else
-	{
-		int newFrameId = frames.AddFrame(frameFingerprint);
-		std::cout << "Frame ADDED to database (" << newFrameId << ")\n";
-	}
-
-	imshow("Frame", frame);
-
-	cv::waitKey(30);
+	//cv::waitKey(30);
 
 	static int totalEnabled = 0;
 
-	if (frequency == 1)
+	if (!similar.isValid()) // New frame.
+	{
+		probabilityGraph.GetFrameDatabase().AddFrame(frameFingerprint);
+		lastProbabilityVertex = probabilityGraph.AddDisabledVertex(frameFingerprint);
+		hasMoved = true;
+
+		std::cout << "New state (" << lastProbabilityVertex->id << ")\n";
+	}
+	else
+	{
+		probabilityGraph.GetFrameDatabase().IncreaseFrequency(similar.id);
+		int frameFrequency = probabilityGraph.GetFrameDatabase().GetFrameFrequency(similar.id);
+
+		ProbabilityVertexPtr vertex = probabilityGraph.GetVertexFromFrame(similar);
+		double* probability = probabilityGraph.GetProbabilityForAdjacent(lastProbabilityVertex, lastKey, vertex);
+
+		bool isSimilarToLast = FrameDatabase::AreFramesSimilar(frameFingerprint, vertex->frame, 2);
+
+		if (frameFrequency >= 3)
+		{
+			if (isSimilarToLast)
+			{
+				if (probability == nullptr)
+					probabilityGraph.ConnectFallbackVertex(lastProbabilityVertex->id, lastKey, 40);
+				else
+					*probability *= 1.2;
+			}
+			else
+			{
+				if (probability == nullptr)
+					probabilityGraph.ConnectVertex(lastProbabilityVertex->id, vertex->id, lastKey, 60);
+				else
+					*probability *= 1.3;
+
+				hasMoved = true;
+			}
+		}
+
+		lastProbabilityVertex = vertex;
+	}
+	/*if (frequency == 1)
 	{
 		lastProbabilityVertex = probabilityGraph.AddDisabledVertex(frameFingerprint);
 		probabilityGraph.GetVertexFrames()[frameFingerprint] = lastProbabilityVertex;
@@ -345,7 +366,7 @@ bool Learner::ProcessFrame()
 		}
 
 		lastProbabilityVertex = newVertex;
-	}
+	} */
 
 	lastFingerprint = lastProbabilityVertex->frame;
 	return hasMoved;

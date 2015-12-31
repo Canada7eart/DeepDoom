@@ -5,6 +5,7 @@
 #include <map>
 #include "Emulator.h"
 #include "FuzzyMap.h"
+#include "FrameDatabase.h"
 
 struct ProbabilityVertex {
 	int id;
@@ -26,7 +27,9 @@ using ProbabilityVertexPtr = std::shared_ptr<ProbabilityVertex>;
 class ProbabilityGraph
 {
 public:
-	ProbabilityGraph();
+	ProbabilityGraph()
+	{
+	}
 
 	int GetRandomUnmappedAction(ProbabilityVertexPtr vertex);
 	double* GetProbabilityForAdjacent(ProbabilityVertexPtr vertex, INPUT_KEY key, ProbabilityVertexPtr adjacent);
@@ -40,6 +43,9 @@ public:
 
 	FuzzyMap<FrameFingerprint, int, double>& GetFrequencies() { return frequencies; }
 	FuzzyMap<FrameFingerprint, ProbabilityVertexPtr, double>& GetVertexFrames() { return vertexFrames; }
+	ProbabilityVertexPtr GetVertexFromFrame(FrameFingerprint& frame) { return frameVertices[frame]; }
+
+	FrameDatabase& GetFrameDatabase() { return frames; }
 
 private:
 	std::vector<ProbabilityVertexPtr> vertices;
@@ -47,6 +53,7 @@ private:
 	FuzzyMap<FrameFingerprint, int, double> frequencies{ FrameFingerprint::SIMILARITY_TRESHOLD };
 	FuzzyMap<FrameFingerprint, ProbabilityVertexPtr, double> vertexFrames{ FrameFingerprint::SIMILARITY_TRESHOLD };
 
-
+	std::map<FrameFingerprint, ProbabilityVertexPtr> frameVertices;
+	FrameDatabase frames;
 };
 

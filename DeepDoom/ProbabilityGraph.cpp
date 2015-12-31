@@ -6,9 +6,6 @@ using std::make_pair;
 
 extern std::vector<INPUT_KEY> keys;
 
-ProbabilityGraph::ProbabilityGraph()
-{
-}
 
 int ProbabilityGraph::GetRandomUnmappedAction(ProbabilityVertexPtr vertex)
 {
@@ -72,6 +69,8 @@ ProbabilityVertexPtr ProbabilityGraph::AddDisabledVertex(FrameFingerprint& frame
 	ProbabilityVertexPtr newVertex = make_shared<ProbabilityVertex>(frame, vertices.size());
 	vertices.push_back(newVertex);
 
+	frameVertices[frame] = newVertex;
+
 	return newVertex;
 }
 
@@ -84,6 +83,8 @@ ProbabilityVertexPtr ProbabilityGraph::AddVertex(FrameFingerprint& frame, Probab
 	{
 		previousVertex->adj.insert(make_pair(key, make_pair(probability, newVertex)));
 	}
+
+	frameVertices[frame] = newVertex;
 
 	return newVertex;
 }

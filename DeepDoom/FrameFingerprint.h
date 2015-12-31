@@ -38,15 +38,14 @@ public:
 		return distance;
 	}
 
-	bool operator==(const FrameFingerprint &other) const {
-		return fingerprint == other.fingerprint;
-	}
 	bool operator<(const FrameFingerprint &other) const {
 		return (fingerprint - other.fingerprint) < 0.0;
 	}
 	bool operator>(const FrameFingerprint &other) const {
 		return (fingerprint - other.fingerprint) > 0.0;
 	}
+
+	bool isValid() const { return fingerprint != 0.0; }
 
 	bool isNormSimilar(const FrameFingerprint& other) const {
 		return (abs((double)(fingerprint - other.fingerprint)) < SIMILARITY_TRESHOLD);
