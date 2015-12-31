@@ -2,7 +2,8 @@
 #include "Learner.h"
 #include <chrono>
 #include "FrameFingerprint.h"
-
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 const std::array<std::string, NUM_INPUTS> keyDescriptions = { "LEFT", "RIGHT", "UP", "DOWN",   "SPACE", "CTRL" };
 std::vector<INPUT_KEY> keys = { INPUT_LEFT , INPUT_RIGHT,INPUT_UP ,INPUT_DOWN,  INPUT_SPACE , INPUT_CTRL };
@@ -15,6 +16,7 @@ void Learner::Train()
 		cv::Rect screen(0, 0, emulator.GetWidth(), 335);
 		initialFrame = initialFrame(screen);
 		cv::cvtColor(initialFrame, initialFrame, CV_BGR2GRAY);
+		frames.AddFrame(FrameFingerprint(initialFrame));
 
 		lastProbabilityVertex = probabilityGraph.AddVertex(FrameFingerprint(initialFrame), nullptr, INPUT_INVALID, 100.0);
 		lastFingerprint = lastProbabilityVertex->frame;
@@ -42,7 +44,7 @@ void Learner::Train()
 
 		ProbabilityVertexPtr previous = lastProbabilityVertex;
 
-		Sleep(200);
+		Sleep(250);
 
 		if (!ProcessFrame())
 		{
@@ -66,11 +68,11 @@ void Learner::Train()
 				if (previous != nullptr)
 					probability = probabilityGraph.GetProbabilityForAdjacent(previous, lastKey, lastProbabilityVertex);
 
-				std::cout << "Prediction CORRECT (n: " << predicted.size() << ") with probability: " << *probability << "\n";
+				//	std::cout << "Prediction CORRECT (n: " << predicted.size() << ") with probability: " << *probability << "\n";
 			}
 			else
 			{
-				std::cout << "Prediction failed (n: " << predicted.size() << ")\n";
+				//	std::cout << "Prediction failed (n: " << predicted.size() << ")\n";
 			}
 		}
 
@@ -258,6 +260,9 @@ bool Learner::ProcessFrame()
 	cv::Rect screen(0, 0, emulator.GetWidth(), 335);
 	frame = frame(screen);
 	cv::cvtColor(frame, frame, CV_BGR2GRAY);
+	GaussianBlur(frame, frame, cv::Size(11, 11), 3);
+
+
 
 	FrameFingerprint frameFingerprint{ frame };
 
@@ -267,6 +272,31 @@ bool Learner::ProcessFrame()
 
 	int frequency = probabilityGraph.GetFrequencies()[frameFingerprint];
 
+	unsigned int id = 0;
+	FrameFingerprint database = frames.GetSimilarFrame(frameFingerprint);
+
+	if (database.fingerprint > 0)
+	{
+		id = database.id;
+		if (frequency == 1)
+		{
+			std::cout << "Found frame in database (" << id << ") but it's supposed to be new\n";
+		}
+		else
+		{
+			std::cout << "Found frame in database (" << id << ")\n";
+		}
+	}
+	else
+	{
+		int newFrameId = frames.AddFrame(frameFingerprint);
+		std::cout << "Frame ADDED to database (" << newFrameId << ")\n";
+	}
+
+	imshow("Frame", frame);
+
+	cv::waitKey(30);
+
 	static int totalEnabled = 0;
 
 	if (frequency == 1)
@@ -274,7 +304,7 @@ bool Learner::ProcessFrame()
 		lastProbabilityVertex = probabilityGraph.AddDisabledVertex(frameFingerprint);
 		probabilityGraph.GetVertexFrames()[frameFingerprint] = lastProbabilityVertex;
 		hasMoved = true;
-		std::cout << "New disabled state (" << lastProbabilityVertex->id << "), fingerprint: " << frameFingerprint.fingerprint << "\n";
+		//std::cout << "New disabled state (" << lastProbabilityVertex->id << "), fingerprint: " << frameFingerprint.fingerprint << "\n";
 	}
 	else if (frequency >= 3)
 	{
@@ -283,7 +313,7 @@ bool Learner::ProcessFrame()
 		if (frequency == 3)
 		{
 			totalEnabled++;
-			std::cout << "Vertex " << newVertex->id << " enabled (total: " << totalEnabled << ")\n";
+			//std::cout << "Vertex " << newVertex->id << " enabled (total: " << totalEnabled << ")\n";
 		}
 
 		bool similar = lastFingerprint.isNormSimilar(frameFingerprint);

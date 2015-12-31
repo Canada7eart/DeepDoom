@@ -61,6 +61,8 @@ public:
 	uint64_t pHash;
 	cv::Mat histogram;
 
+	unsigned int id;
+
 	//static constexpr double SIMILARITY_TRESHOLD = 0.00190;
 	static constexpr double SIMILARITY_TRESHOLD = 0.0250;
 

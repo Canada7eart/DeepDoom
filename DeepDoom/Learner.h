@@ -5,6 +5,7 @@
 #include <random>
 #include <ctime>
 #include "ProbabilityGraph.h"
+#include "FrameDatabase.h"
 
 class Learner
 {
@@ -27,6 +28,7 @@ private:
 	LevelVertexPtr lastVertex = nullptr;
 	ProbabilityGraph probabilityGraph;
 	ProbabilityVertexPtr lastProbabilityVertex = nullptr;
+	FrameDatabase frames;
 
 	INPUT_KEY lastKey = INPUT_INVALID;
 	FrameFingerprint lastFingerprint = FrameFingerprint(0.0);
