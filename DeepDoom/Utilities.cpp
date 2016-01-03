@@ -4,6 +4,18 @@
 using cv::Mat;
 using cv::Size;
 
+int GetPredictionPercentage(std::vector<bool>& predictions)
+{
+	int numCorrect = 0;
+	for (unsigned int i = 0; i < predictions.size(); ++i)
+	{
+		if (predictions[i] == true)
+			numCorrect++;
+	}
+
+	return numCorrect * 100 / predictions.size();
+}
+
 uint64_t CalculateHash(Mat& img)
 {
 	Mat temp;

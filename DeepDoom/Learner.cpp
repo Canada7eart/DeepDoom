@@ -27,8 +27,8 @@ void Learner::Train()
 	{
 		int key = -1;
 
-		//	if (GetRandom(0, 1) == 0)
-			//	key = probabilityGraph.GetRandomUnmappedAction(lastProbabilityVertex);
+		//if (GetRandom(0, 1) == 0)
+		//	key = probabilityGraph.GetRandomUnmappedAction(lastProbabilityVertex);
 
 		if (key == -1)
 		{
@@ -39,21 +39,22 @@ void Learner::Train()
 		if (lastProbabilityVertex != nullptr)
 			predicted = probabilityGraph.GetProbable(lastProbabilityVertex, keys[key]);
 
-		emulator.SendKey(keys[key], 60, 9, false);
+		emulator.SendKey(keys[key], 60, 8, false);
 		lastKey = keys[key];
 
 		ProbabilityVertexPtr previous = lastProbabilityVertex;
 
-		Sleep(250);
+		Sleep(200);
 
 		if (!ProcessFrame())
 		{
 
 		}
 
-		//std::cout << "Size : " << predicted.size() << "\n";
+		//std::cout << "Predicted size: " << predicted.size() << "\n";
 
-		if (lastProbabilityVertex != nullptr && predicted.size() > 2)
+		static std::vector<bool> lastPredictions;
+		if (lastProbabilityVertex != nullptr && predicted.size() > 0)
 		{
 			bool predictionCorrect = false;
 			for (int pred : predicted)
@@ -66,193 +67,28 @@ void Learner::Train()
 			}
 			if (predictionCorrect)
 			{
+				lastPredictions.push_back(true);
+
 				double* probability = nullptr;
 				if (previous != nullptr)
 					probability = probabilityGraph.GetProbabilityForAdjacent(previous, lastKey, lastProbabilityVertex);
 
-				std::cout << "Prediction CORRECT (n: " << predicted.size() << ") with probability: " << *probability << "\n";
+				std::cout << "(" << GetPredictionPercentage(lastPredictions) << "%) Prediction CORRECT (n: " << predicted.size() << ") "
+					<< "from " << previous->id << " to " << lastProbabilityVertex->id << " with probability: " << *probability << "\n";
 			}
 			else
 			{
-				std::cout << "Prediction failed (n: " << predicted.size() << ")\n";
+				lastPredictions.push_back(false);
+				std::cout << "(" << GetPredictionPercentage(lastPredictions) << "%) Prediction failed (n: " << predicted.size() << ")\n";
 			}
+
+			if (lastPredictions.size() == 10)
+				lastPredictions.erase(lastPredictions.begin());
+
 		}
 
 	}
-
-
-
-	/*
-	bool hasMoved = true;
-	bool triedInverse = false;
-
-	int key = INPUT_INVALID;
-	int keyRetries = 0;
-	const int MAX_RETRIES = 3;
-
-	const bool loadGraph = false;
-
-	if (loadGraph) {
-
-		level.LoadFromFile("graph_2.bin");
-		lastVertex = level.GetVertex(0);
-		lastFingerprint = lastVertex->frame;
-	}
-
-	unsigned long long numFrames = 0;
-
-	LevelVertexPtr predicted = nullptr;
-	LevelVertexPtr previous = nullptr;
-	bool isPredicted = false;
-
-	while (true)
-	{
-		if (hasMoved)
-		{
-			if (lastVertex != nullptr)
-			{
-				key = level.GetRandomUnmappedAction(lastVertex);
-				if (key != -1)
-					std::cout << "Unmapped key: " << keyDescriptions[key] << "\n";
-			}
-
-			if (key == -1)
-			{
-				//	std::cout << "Searching unmapped path.\n";
-
-			//	if (loadGraph)
-			//	{
-				if (lastVertex != nullptr)
-				{
-					key = level.GetFirstUnmappedPath(lastVertex);
-
-					if (key == -1)
-					{
-						key = GetRandom(0, 1);
-
-						std::cout << "Random key: " << key << "\n";
-						if (lastVertex != nullptr)
-							std::cout << "No unmapped action at vertex " << lastVertex->id << "\n";
-					}
-					else
-					{
-						std::cout << "Unmapped path: " << keyDescriptions[key] << "\n";
-
-						if (key == -1)
-						{
-							for (int i = 0; i < 5; ++i)
-								std::cout << "ERROR\n";
-						}
-					}
-				}
-				else
-				{
-
-					key = GetRandom(0, 1);
-
-					std::cout << "Random key: " << key << "\n";
-					if (lastVertex != nullptr)
-						std::cout << "No unmapped action at vertex " << lastVertex->id << "\n";
-				}
-			}
-			else
-			{
-				//std::cout << "Unmapped key: " << keyDescriptions[key] << "\n";
-			}
-		}
-		else
-		{
-			// Repeat last key.
-			std::cout << "Repeating " << keyDescriptions[key] << "\n";
-		}
-
-		if (lastVertex != nullptr && lastVertex->adj.find(keys[key]) != lastVertex->adj.end())
-		{
-			if (lastVertex->adj[keys[key]] != nullptr)
-			{
-				previous = lastVertex;
-				predicted = lastVertex->adj[keys[key]];
-				isPredicted = true;
-			}
-		}
-
-		emulator.SendKey(keys[key], 60, 4, false);
-
-		if (lastVertex != nullptr)
-			std::cout << "Sent keystroke " << keyDescriptions[key] << " at vertex " << lastVertex->id << "\n";
-
-		//Sleep(1500);
-
-		lastKey = keys[key];
-
-		//Sleep(60 * 4);
-
-		if (!ProcessFrame())
-		{
-			hasMoved = false;
-			keyRetries++;
-			if (keyRetries > MAX_RETRIES)
-			{
-				keyRetries = 0;
-
-				if (triedInverse)
-				{
-					hasMoved = true;
-				}
-				else
-				{
-					INPUT_KEY inverse = Emulator::GetInverseKey(keys[key]);
-					if (inverse != INPUT_INVALID)
-					{
-						triedInverse = true;
-						auto id = std::find(keys.begin(), keys.end(), inverse);
-						key = std::distance(keys.begin(), id);
-						std::cout << "Trying inverse key " << keyDescriptions[key] << "\n";
-					}
-					else
-						hasMoved = true;
-				}
-			}
-		}
-		else
-		{
-			triedInverse = false;
-			keyRetries = 0;
-			hasMoved = true;
-		}
-
-		if (isPredicted)
-		{
-			if (lastVertex->id != predicted->id)
-			{
-				std::cout << "Prediction failed (should be " << predicted->id << ", was " << lastVertex->id << ")\n";
-				if (previous->id != lastVertex->id)
-					level.ConnectVertex(previous->id, lastVertex->id, keys[key]);
-				else
-					level.ConnectFallbackVertex(previous->id, keys[key]);
-			}
-			else
-			{
-				std::cout << "Prediction CORRECT.\n";
-			}
-
-			isPredicted = false;
-		}
-
-		numFrames++;
-
-		if (numFrames % 100 == 0)
-		{
-			std::cout << "Saving to file.\n";
-			level.SaveToFile("graph_2.bin");
-			numFrames = 0;
-		}
-
-
-	} */
 }
-
-
 
 bool Learner::ProcessFrame()
 {
@@ -297,20 +133,28 @@ bool Learner::ProcessFrame()
 		double* probability = probabilityGraph.GetProbabilityForAdjacent(lastProbabilityVertex, lastKey, vertex);
 
 		bool isSimilarToLast = FrameDatabase::AreFramesSimilar(frameFingerprint, vertex->frame, 2);
+		isSimilarToLast = false;
 
-		if (frameFrequency >= 3)
+
+		if (frameFrequency >= 1)
 		{
 			if (isSimilarToLast)
 			{
 				if (probability == nullptr)
+				{
+					//	std::cout << "Fallback\n";
 					probabilityGraph.ConnectFallbackVertex(lastProbabilityVertex->id, lastKey, 40);
+				}
 				else
 					*probability *= 1.2;
 			}
 			else
 			{
 				if (probability == nullptr)
+				{
+					//	std::cout << "Connection\n";
 					probabilityGraph.ConnectVertex(lastProbabilityVertex->id, vertex->id, lastKey, 60);
+				}
 				else
 					*probability *= 1.3;
 
@@ -320,114 +164,9 @@ bool Learner::ProcessFrame()
 
 		lastProbabilityVertex = vertex;
 	}
-	/*if (frequency == 1)
-	{
-		lastProbabilityVertex = probabilityGraph.AddDisabledVertex(frameFingerprint);
-		probabilityGraph.GetVertexFrames()[frameFingerprint] = lastProbabilityVertex;
-		hasMoved = true;
-		//std::cout << "New disabled state (" << lastProbabilityVertex->id << "), fingerprint: " << frameFingerprint.fingerprint << "\n";
-	}
-	else if (frequency >= 3)
-	{
-		ProbabilityVertexPtr newVertex = probabilityGraph.GetVertexFrames()[frameFingerprint];
-
-		if (frequency == 3)
-		{
-			totalEnabled++;
-			//std::cout << "Vertex " << newVertex->id << " enabled (total: " << totalEnabled << ")\n";
-		}
-
-		bool similar = lastFingerprint.isNormSimilar(frameFingerprint);
-
-		double* probability = probabilityGraph.GetProbabilityForAdjacent(lastProbabilityVertex, lastKey, newVertex);
-
-		if (similar)
-		{
-			if (probability == nullptr)
-			{
-				probabilityGraph.ConnectFallbackVertex(lastProbabilityVertex->id, lastKey, 30.0);
-			}
-			else
-			{
-				*probability *= 1.2;
-			}
-		}
-		else
-		{
-			if (probability == nullptr)
-			{
-				probabilityGraph.ConnectVertex(lastProbabilityVertex->id, newVertex->id, lastKey, 40.0);
-			}
-			else
-			{
-				*probability *= 1.3;
-			}
-			hasMoved = true;
-		}
-
-		lastProbabilityVertex = newVertex;
-	} */
 
 	lastFingerprint = lastProbabilityVertex->frame;
 	return hasMoved;
-
-	/*auto start = std::chrono::high_resolution_clock::now();
-
-	cv::Mat frame;
-	emulator.GetFrame(frame);
-
-	cv::Rect screen(0, 0, emulator.GetWidth(), 335);
-	frame = frame(screen);
-	cv::cvtColor(frame, frame, CV_BGR2GRAY);
-
-	FrameFingerprint frameFingerprint{ frame };
-
-	auto end = std::chrono::high_resolution_clock::now();
-
-	//std::cout << "Frame acquired in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "\n";
-	//std::cout << "Fingerprint: " << frameFingerprint.fingerprint << "\n";
-
-	level.GetFrequencies()[frameFingerprint]++;
-
-	//std::cout << "Frequency (map): " << frequencies[frameFingerprint] << "\n";
-
-	bool hasMoved = false;
-
-	if (level.GetFrequencies()[frameFingerprint] == 1)
-	{
-		lastVertex = level.AddVertex(frameFingerprint, lastVertex, lastKey);
-		level.GetVertexFrames()[frameFingerprint] = lastVertex;
-
-		std::cout << "New state (" << (lastVertex->id + 1) << ")\n";
-
-		hasMoved = true;
-	}
-	else
-	{
-		LevelVertexPtr newVertex = level.GetVertexFrames()[frameFingerprint];
-
-
-		bool similar = lastFingerprint.isSimilar(frameFingerprint);
-
-		if (similar) // We did't move a lot (or at all), roughly the same frame.
-		{
-
-			if (!lastVertex->HasAdjacent(lastKey))
-				level.AddFallbackVertex(lastVertex, lastKey);
-			hasMoved = false;
-			//	std::cout << "No effect.\n";
-		}
-		else // We arrived at a state we already knew.
-		{
-			level.ConnectVertex(lastVertex->id, newVertex->id, lastKey);
-			hasMoved = true;
-		}
-
-		lastVertex = newVertex;
-	}
-
-	lastFingerprint = lastVertex->frame;
-	return hasMoved; */
 }
 
 int Learner::GetRandom(int min, int max)
