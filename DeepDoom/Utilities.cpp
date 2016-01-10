@@ -1,8 +1,43 @@
 #include "stdafx.h"
 #include <numeric>
+#include <fstream>
 
 using cv::Mat;
 using cv::Size;
+
+void SaveTraversedToFile(const std::vector<unsigned int> vertices, const std::string& filename)
+{
+	std::ofstream file(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+
+	if (!file.is_open())
+	{
+		return;
+	}
+
+	for (const unsigned int& vertex : vertices)
+	{
+		file.write((const char*)&vertex, sizeof(vertex));
+	}
+
+	file.close();
+}
+
+void SavePredictionsToFile(const std::vector<bool> predictions, const std::string& filename)
+{
+	std::ofstream file(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+
+	if (!file.is_open())
+	{
+		return;
+	}
+
+	for (const bool& pred : predictions)
+	{
+		file.write((const char*)&pred, sizeof(pred));
+	}
+
+	file.close();
+}
 
 int GetPredictionPercentage(std::vector<bool>& predictions)
 {

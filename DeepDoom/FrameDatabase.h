@@ -1,9 +1,15 @@
 #pragma once
 #include "FrameFingerprint.h"
+#include <time.h>
 
 class FrameDatabase
 {
 public:
+	FrameDatabase()
+	{
+		//std::srand(time(NULL));
+	}
+
 	FrameFingerprint GetSimilarFrame(const FrameFingerprint& frame) const;
 	int AddFrame(FrameFingerprint& frame);
 
@@ -23,7 +29,7 @@ private:
 	static std::vector<double> HISTOGRAM_TRESHOLD;
 	static std::vector<double> NORM_TRESHOLD;
 
-	static constexpr int MAX_STRICTNESS = 2;
+	static constexpr int MAX_STRICTNESS = 4;
 	/*
 	// Also seems to work.
 	int HAMMING_TRESHOLD = 35;

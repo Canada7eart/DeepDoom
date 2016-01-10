@@ -8,6 +8,9 @@
 const std::array<std::string, NUM_INPUTS> keyDescriptions = { "LEFT", "RIGHT", "UP", "DOWN",   "SPACE", "CTRL" };
 std::vector<INPUT_KEY> keys = { INPUT_LEFT , INPUT_RIGHT,INPUT_UP ,INPUT_DOWN,  INPUT_SPACE , INPUT_CTRL };
 
+std::vector<unsigned int> traversed = { 0,0,0,0,0,0,0,0 };
+std::vector<bool> predictions;
+
 void Learner::Train()
 {
 	{
@@ -16,70 +19,141 @@ void Learner::Train()
 		cv::Rect screen(0, 0, emulator.GetWidth(), 335);
 		initialFrame = initialFrame(screen);
 		cv::cvtColor(initialFrame, initialFrame, CV_BGR2GRAY);
+		GaussianBlur(initialFrame, initialFrame, cv::Size(11, 11), 3);
 
+		if (false)
+		{
+			std::string graphFile = "graphs_05_01/graph_48000.bin";
+			probabilityGraph.Load(graphFile);
 
-		lastProbabilityVertex = probabilityGraph.AddVertex(FrameFingerprint(initialFrame), nullptr, INPUT_INVALID, 100.0);
-		lastFingerprint = lastProbabilityVertex->frame;
-		lastKey = INPUT_INVALID;
+			FrameFingerprint similar = probabilityGraph.GetFrameDatabase().GetSimilarFrame(FrameFingerprint(initialFrame));
+
+			lastProbabilityVertex = probabilityGraph.GetVertexFromFrame(similar);
+
+			int y = 0;
+		}
+		else
+		{
+
+			lastProbabilityVertex = probabilityGraph.AddVertex(FrameFingerprint(initialFrame), nullptr, INPUT_INVALID, 100.0);
+			lastFingerprint = lastProbabilityVertex->frame;
+			lastKey = INPUT_INVALID;
+		}
 	}
 
 	while (true)
 	{
 		int key = -1;
 
-		//if (GetRandom(0, 1) == 0)
+		//if (lastProbabilityVertex != nullptr && GetRandom(0, 1) == 0)
 		//	key = probabilityGraph.GetRandomUnmappedAction(lastProbabilityVertex);
 
 		if (key == -1)
 		{
-			key = GetRandom(0, 1);
+			key = GetRandom(0, 3);
 		}
 
-		std::vector<int> predicted;
-		if (lastProbabilityVertex != nullptr)
-			predicted = probabilityGraph.GetProbable(lastProbabilityVertex, keys[key]);
 
 		emulator.SendKey(keys[key], 60, 8, false);
 		lastKey = keys[key];
 
 		ProbabilityVertexPtr previous = lastProbabilityVertex;
 
-		Sleep(200);
+		Sleep(250);
+
+		std::vector<int> predicted, predictedAny;
+		if (previous != nullptr)
+		{
+			predicted = probabilityGraph.GetProbable(previous, { keys[key] });
+		}
+
+		static unsigned long long numFrames = 0;
 
 		if (!ProcessFrame())
 		{
 
 		}
+		traversed.push_back(lastProbabilityVertex->id);
 
-		//std::cout << "Predicted size: " << predicted.size() << "\n";
+		numFrames++;
+
+
+		//	if (numFrames % 1500 == 0)
+		if (false)
+		{
+			std::string graphFile = "graphs_06_01/graph_" + std::to_string(numFrames) + ".bin";
+			probabilityGraph.Save(graphFile);
+			std::cout << "Saved to file " << graphFile << "\n";
+
+			std::string traversedFile = "graphs_06_01/traversed_" + std::to_string(numFrames) + ".bin";
+			SaveTraversedToFile(traversed, traversedFile);
+
+			std::string predictionsFile = "graphs_06_01/predictions_" + std::to_string(numFrames) + ".bin";
+			SavePredictionsToFile(predictions, predictionsFile);
+		}
+
+		std::cout << "Now at state " << lastProbabilityVertex->id << "\n";
+
+		if (previous != nullptr)
+		{
+			//predictedAny = probabilityGraph.GetProbable(previous, { INPUT_ANY });
+		}
 
 		static std::vector<bool> lastPredictions;
-		if (lastProbabilityVertex != nullptr && predicted.size() > 0)
+		int nPredictions = predicted.size() + predictedAny.size();
+		if (previous != nullptr && lastProbabilityVertex != nullptr && previous->id != lastProbabilityVertex->id && nPredictions > 1)
 		{
 			bool predictionCorrect = false;
+			bool isAccurate = false;
+
 			for (int pred : predicted)
 			{
 				if (pred == lastProbabilityVertex->id)
 				{
 					predictionCorrect = true;
+					isAccurate = true;
 					break;
 				}
 			}
+
+			if (!predictionCorrect)
+			{
+				for (int pred : predictedAny)
+				{
+					if (pred == lastProbabilityVertex->id)
+					{
+						predictionCorrect = true;
+						break;
+					}
+				}
+			}
+
 			if (predictionCorrect)
 			{
 				lastPredictions.push_back(true);
+				predictions.push_back(true);
 
 				double* probability = nullptr;
 				if (previous != nullptr)
 					probability = probabilityGraph.GetProbabilityForAdjacent(previous, lastKey, lastProbabilityVertex);
 
-				std::cout << "(" << GetPredictionPercentage(lastPredictions) << "%) Prediction CORRECT (n: " << predicted.size() << ") "
-					<< "from " << previous->id << " to " << lastProbabilityVertex->id << " with probability: " << *probability << "\n";
+				std::cout << "(" << GetPredictionPercentage(lastPredictions) << "%) Prediction CORRECT "
+					<< "(n: " << nPredictions << "/" << probabilityGraph.GetNumVertices() << ") "
+					<< "from " << previous->id << " to " << lastProbabilityVertex->id
+					<< " with probability: ";
+				if (!isAccurate || probability == nullptr)
+					std::cout << "unknown";
+				else
+					std::cout << *probability;
+				std::cout << "\n";
 			}
 			else
 			{
 				lastPredictions.push_back(false);
-				std::cout << "(" << GetPredictionPercentage(lastPredictions) << "%) Prediction failed (n: " << predicted.size() << ")\n";
+				predictions.push_back(false);
+				std::cout << "(" << GetPredictionPercentage(lastPredictions) << "%) Prediction failed "
+					<< "(n: " << nPredictions << "/" << probabilityGraph.GetNumVertices() << ") "
+					<< "from " << previous->id << " to " << lastProbabilityVertex->id << "\n";
 			}
 
 			if (lastPredictions.size() == 10)
@@ -120,6 +194,7 @@ bool Learner::ProcessFrame()
 	{
 		probabilityGraph.GetFrameDatabase().AddFrame(frameFingerprint);
 		lastProbabilityVertex = probabilityGraph.AddDisabledVertex(frameFingerprint);
+		//probabilityGraph.MultipleConnect(lastProbabilityVertex->id, { traversed.end() - 5, traversed.end() }, 20);
 		hasMoved = true;
 
 		std::cout << "New state (" << lastProbabilityVertex->id << ")\n";
@@ -134,7 +209,6 @@ bool Learner::ProcessFrame()
 
 		bool isSimilarToLast = FrameDatabase::AreFramesSimilar(frameFingerprint, vertex->frame, 2);
 		isSimilarToLast = false;
-
 
 		if (frameFrequency >= 1)
 		{
@@ -152,7 +226,7 @@ bool Learner::ProcessFrame()
 			{
 				if (probability == nullptr)
 				{
-					//	std::cout << "Connection\n";
+					//std::cout << "Connection\n";
 					probabilityGraph.ConnectVertex(lastProbabilityVertex->id, vertex->id, lastKey, 60);
 				}
 				else

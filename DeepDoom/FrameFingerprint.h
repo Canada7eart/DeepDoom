@@ -3,8 +3,6 @@
 #include <opencv2/core.hpp>
 #include "Utilities.h"
 
-
-
 class FrameFingerprint
 {
 public:
@@ -26,6 +24,10 @@ public:
 		fingerprint = cv::norm(frame, CV_L2) / ((double)frame.rows * (double)frame.cols);
 		pHash = CalculatePHash(frame);
 	}
+
+	FrameFingerprint(double fingerprint, uint64_t pHash, cv::Mat histogram)
+		: fingerprint(fingerprint), pHash(pHash), histogram(histogram)
+	{}
 
 	FrameFingerprint(double fp)
 	{
@@ -61,6 +63,7 @@ public:
 	cv::Mat histogram;
 
 	unsigned int id;
+	unsigned int groupId;
 
 	//static constexpr double SIMILARITY_TRESHOLD = 0.00190;
 	static constexpr double SIMILARITY_TRESHOLD = 0.0250;

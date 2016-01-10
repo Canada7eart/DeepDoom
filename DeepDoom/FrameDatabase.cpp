@@ -1,10 +1,13 @@
 #include "stdafx.h"
 #include "FrameDatabase.h"
-
-std::vector<int> FrameDatabase::HAMMING_TRESHOLD = { 36, 33, 27 };
-std::vector<double> FrameDatabase::HISTOGRAM_TRESHOLD = { 0.12, 0.10, 0.06 };
-std::vector<double>  FrameDatabase::NORM_TRESHOLD = { 0.0950, 0.0800, 0.0550 };
-
+/*
+std::vector<int> FrameDatabase::HAMMING_TRESHOLD = { 36, 33, 30, 27 };
+std::vector<double> FrameDatabase::HISTOGRAM_TRESHOLD = { 0.15, 0.11, 0.08, 0.06 };
+std::vector<double>  FrameDatabase::NORM_TRESHOLD = { 0.0950, 0.0800, 0.0650, 0.0550 };
+*/
+std::vector<int> FrameDatabase::HAMMING_TRESHOLD = { 40, 38, 33, 30, 27 };
+std::vector<double> FrameDatabase::HISTOGRAM_TRESHOLD = { 0.20, 0.17, 0.11, 0.08, 0.06 };
+std::vector<double>  FrameDatabase::NORM_TRESHOLD = { 0.0950, 0.0900, 0.0800, 0.0650, 0.0550 };
 
 FrameFingerprint FrameDatabase::GetSimilarFrame(const FrameFingerprint& frame) const
 {
@@ -26,14 +29,14 @@ FrameFingerprint FrameDatabase::GetSimilarFrame(const FrameFingerprint& frame,
 		{
 			if (cv::compareHist(frame.histogram, databaseFrame.histogram, CV_COMP_BHATTACHARYYA) < HISTOGRAM_TRESHOLD[strictness])
 			{
-
 				framesFound.push_back(databaseFrame);
 			}
 		}
-		//	}
+		//}
 	}
 
-	//std::cout << "Found: " << framesFound.size() << "\n";
+	//	if (framesFound.size() > 1)
+		//	std::cout << "Found: " << framesFound.size() << "\n";
 
 	if (framesFound.size() == 1)
 	{
@@ -45,7 +48,20 @@ FrameFingerprint FrameDatabase::GetSimilarFrame(const FrameFingerprint& frame,
 		{
 			FrameFingerprint best = GetSimilarFrame(frame, framesFound, strictness + 1);
 			if (!best.isValid())
-				return framesFound[0];
+			{
+				double minFingerprintDistance = std::numeric_limits<double>::max();
+				int minFingerprintDistanceIndex = 0;
+				for (int i = 0; i < framesFound.size(); ++i)
+				{
+					double distance = abs((double)(frame.fingerprint - framesFound[i].fingerprint));
+					if (distance < minFingerprintDistance)
+					{
+						minFingerprintDistance = distance;
+						minFingerprintDistanceIndex = i;
+					}
+				}
+				return framesFound[minFingerprintDistanceIndex];
+			}
 			else return best;
 		}
 		else return framesFound[0];
@@ -74,6 +90,5 @@ bool FrameDatabase::AreFramesSimilar(const FrameFingerprint& frame1, const Frame
 		}
 	}
 	//}
-
 	return false;
 }
