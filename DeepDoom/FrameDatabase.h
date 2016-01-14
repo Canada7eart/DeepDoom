@@ -17,6 +17,10 @@ public:
 	void IncreaseFrequency(int frameId) { frequencies[frameId]++; }
 	void DecreaseFrequency(int frameId) { frequencies[frameId]--; }
 
+	std::vector<FrameFingerprint> GetFrameGroup(int groupId) {
+		return groupFrames[groupId];
+	}
+
 	static bool AreFramesSimilar(const FrameFingerprint& frame1, const FrameFingerprint& frame2, int strictness = 0);
 
 private:
@@ -24,12 +28,16 @@ private:
 
 	std::vector<FrameFingerprint> frames;
 	std::vector<int> frequencies;
+	std::vector<std::vector<FrameFingerprint>> groupFrames;
 
 	static std::vector<int> HAMMING_TRESHOLD;
 	static std::vector<double> HISTOGRAM_TRESHOLD;
 	static std::vector<double> NORM_TRESHOLD;
 
-	static constexpr int MAX_STRICTNESS = 4;
+	static double GROUP_NORM_TRESHOLD;
+	static double GROUP_HISTOGRAM_TRESHOLD;
+
+	static constexpr int MAX_STRICTNESS = 3;
 	/*
 	// Also seems to work.
 	int HAMMING_TRESHOLD = 35;

@@ -5,9 +5,11 @@ std::vector<int> FrameDatabase::HAMMING_TRESHOLD = { 36, 33, 30, 27 };
 std::vector<double> FrameDatabase::HISTOGRAM_TRESHOLD = { 0.15, 0.11, 0.08, 0.06 };
 std::vector<double>  FrameDatabase::NORM_TRESHOLD = { 0.0950, 0.0800, 0.0650, 0.0550 };
 */
-std::vector<int> FrameDatabase::HAMMING_TRESHOLD = { 40, 38, 33, 30, 27 };
-std::vector<double> FrameDatabase::HISTOGRAM_TRESHOLD = { 0.20, 0.17, 0.11, 0.08, 0.06 };
-std::vector<double>  FrameDatabase::NORM_TRESHOLD = { 0.0950, 0.0900, 0.0800, 0.0650, 0.0550 };
+std::vector<int> FrameDatabase::HAMMING_TRESHOLD = { 36, 33, 30, 27 };
+std::vector<double> FrameDatabase::HISTOGRAM_TRESHOLD = { 0.15, 0.11, 0.08, 0.06 };
+std::vector<double>  FrameDatabase::NORM_TRESHOLD = { 0.0900, 0.0800, 0.0650, 0.0550 };
+double FrameDatabase::GROUP_NORM_TRESHOLD = 0.125;
+double FrameDatabase::GROUP_HISTOGRAM_TRESHOLD = 0.25;
 
 FrameFingerprint FrameDatabase::GetSimilarFrame(const FrameFingerprint& frame) const
 {
@@ -73,8 +75,41 @@ FrameFingerprint FrameDatabase::GetSimilarFrame(const FrameFingerprint& frame,
 int FrameDatabase::AddFrame(FrameFingerprint& frame)
 {
 	frame.id = frames.size();
+
+	bool groupFound = false;
+	for (int i = 0; i < groupFrames.size(); ++i)
+	{
+		std::vector<FrameFingerprint>& group = groupFrames[i];
+
+		bool isInGroup = true;
+		for (FrameFingerprint& groupFrame : group)
+		{
+			if (abs((double)(frame.fingerprint - groupFrame.fingerprint)) >= GROUP_NORM_TRESHOLD ||
+				cv::compareHist(frame.histogram, groupFrame.histogram, CV_COMP_BHATTACHARYYA) >= GROUP_HISTOGRAM_TRESHOLD)
+			{
+				isInGroup = false;
+				break;
+			}
+		}
+
+		if (isInGroup)
+		{
+			groupFound = true;
+			frame.groupId = i;
+			group.push_back(frame);
+			break;
+		}
+	}
+
+	if (!groupFound)
+	{
+		frame.groupId = groupFrames.size();
+		groupFrames.push_back({ frame });
+	}
+
 	frames.push_back(frame);
 	frequencies.push_back(1);
+
 	return frame.id;
 }
 

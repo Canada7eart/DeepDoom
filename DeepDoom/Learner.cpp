@@ -4,12 +4,16 @@
 #include "FrameFingerprint.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <utility>
+
 
 const std::array<std::string, NUM_INPUTS> keyDescriptions = { "LEFT", "RIGHT", "UP", "DOWN",   "SPACE", "CTRL" };
 std::vector<INPUT_KEY> keys = { INPUT_LEFT , INPUT_RIGHT,INPUT_UP ,INPUT_DOWN,  INPUT_SPACE , INPUT_CTRL };
 
 std::vector<unsigned int> traversed = { 0,0,0,0,0,0,0,0 };
 std::vector<bool> predictions;
+
+std::map<std::pair<unsigned int, std::pair<INPUT_KEY, unsigned int>>, unsigned int> edgeFrequency;
 
 void Learner::Train()
 {
@@ -62,9 +66,30 @@ void Learner::Train()
 		Sleep(250);
 
 		std::vector<int> predicted, predictedAny;
+		int predictedGroup = -1;
 		if (previous != nullptr)
 		{
 			predicted = probabilityGraph.GetProbable(previous, { keys[key] });
+
+			std::map<int, int> groupFrequencies;
+			for (int pred : predicted)
+			{
+				groupFrequencies[probabilityGraph.GetGroupId(pred)]++;
+			}
+
+			int maxFrequency = INT_MIN;
+			int maxIndex = -1;
+			for (auto& pair : groupFrequencies)
+			{
+				if (pair.second > maxFrequency)
+				{
+					maxFrequency = pair.second;
+					maxIndex = pair.first;
+				}
+			}
+
+			predictedGroup = maxIndex;
+
 		}
 
 		static unsigned long long numFrames = 0;
@@ -103,6 +128,13 @@ void Learner::Train()
 		int nPredictions = predicted.size() + predictedAny.size();
 		if (previous != nullptr && lastProbabilityVertex != nullptr && previous->id != lastProbabilityVertex->id && nPredictions > 1)
 		{
+			if (predictedGroup != -1)
+			{
+				auto& groupFrames = probabilityGraph.GetFrameDatabase().GetFrameGroup(predictedGroup);
+				for (auto& groupFrame : groupFrames)
+					predicted.push_back(groupFrame.id);
+			}
+
 			bool predictionCorrect = false;
 			bool isAccurate = false;
 
@@ -158,7 +190,6 @@ void Learner::Train()
 
 			if (lastPredictions.size() == 10)
 				lastPredictions.erase(lastPredictions.begin());
-
 		}
 
 	}
@@ -188,8 +219,6 @@ bool Learner::ProcessFrame()
 
 	//cv::waitKey(30);
 
-	static int totalEnabled = 0;
-
 	if (!similar.isValid()) // New frame.
 	{
 		probabilityGraph.GetFrameDatabase().AddFrame(frameFingerprint);
@@ -197,7 +226,7 @@ bool Learner::ProcessFrame()
 		//probabilityGraph.MultipleConnect(lastProbabilityVertex->id, { traversed.end() - 5, traversed.end() }, 20);
 		hasMoved = true;
 
-		std::cout << "New state (" << lastProbabilityVertex->id << ")\n";
+		std::cout << "New state (" << lastProbabilityVertex->id << "), group " << frameFingerprint.groupId << "\n";
 	}
 	else
 	{
@@ -210,7 +239,10 @@ bool Learner::ProcessFrame()
 		bool isSimilarToLast = FrameDatabase::AreFramesSimilar(frameFingerprint, vertex->frame, 2);
 		isSimilarToLast = false;
 
-		if (frameFrequency >= 1)
+		std::pair<unsigned int, std::pair<INPUT_KEY, unsigned int>> edge = std::make_pair(lastProbabilityVertex->id, std::make_pair(lastKey, vertex->id));
+		edgeFrequency[edge]++;
+
+		if (frameFrequency >= 1 && edgeFrequency[edge] > 0)
 		{
 			if (isSimilarToLast)
 			{

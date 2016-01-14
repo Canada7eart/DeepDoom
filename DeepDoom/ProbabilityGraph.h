@@ -36,6 +36,8 @@ public:
 
 	std::vector<int> GetProbable(ProbabilityVertexPtr vertex, std::vector<INPUT_KEY> keys);
 
+	unsigned int GetGroupId(unsigned int V) { return vertices[V]->frame.groupId; }
+
 	ProbabilityVertexPtr AddDisabledVertex(FrameFingerprint& frame);
 	ProbabilityVertexPtr AddVertex(FrameFingerprint& frame, ProbabilityVertexPtr previousVertex, INPUT_KEY key, double probability);
 	void ConnectVertex(unsigned int V, unsigned int W, INPUT_KEY key, double probability);
